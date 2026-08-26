@@ -1,0 +1,7 @@
+---
+platform_namespace: sandbox-platform
+backend_secret_name: sandbox-backend-secrets
+
+# Overridden via group_vars/secrets.yml (vault-encrypted in real use)
+postgres_password: ""
+backend_secret_key: ""

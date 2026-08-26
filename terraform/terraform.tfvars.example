@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and adjust for your environment.
+
+kubeconfig_path      = "~/.kube/config"
+kube_context         = "my-cluster-context"
+
+platform_namespace   = "sandbox-platform"
+argocd_namespace     = "argocd"
+install_argocd       = false
+
+git_repo_url         = "https://github.com/your-org/devops-sandbox.git"
+git_target_revision  = "main"
+helm_chart_path      = "helm/sandbox-platform"
+
+storage_class        = "" # empty string = cluster default

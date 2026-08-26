@@ -1,0 +1,15 @@
+apiVersion: v2
+name: sandbox-platform
+description: >-
+  DevOps/SRE training sandbox platform: React frontend, FastAPI backend,
+  and PostgreSQL, deployed onto an existing Kubernetes cluster. Owns
+  application deployment only -- runtime per-user sandbox namespaces/pods
+  are created directly by the backend, not by this chart.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - devops
+  - sre
+  - training
+  - kubernetes

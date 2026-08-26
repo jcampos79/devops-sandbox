@@ -1,0 +1,33 @@
+# Reference copy of the ArgoCD Application definition.
+#
+# In normal use, Terraform creates this resource for you
+# (terraform/main.tf -> kubernetes_manifest.sandbox_platform_application).
+# This file exists so the Application can also be applied manually
+# (`kubectl apply -f argocd/sandbox-platform.yaml`) -- e.g. for local
+# development against a cluster where you don't want to run Terraform -- and
+# so the desired GitOps state is visible and diffable in the repo itself.
+#
+# Keep this in sync with terraform/main.tf if you change one.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sandbox-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/devops-sandbox.git
+    targetRevision: main
+    path: helm/sandbox-platform
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sandbox-platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

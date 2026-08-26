@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sandbox-platform.fullname" . }}-backend-config
+  labels:
+    {{- include "sandbox-platform.labels" . | nindent 4 }}
+data:
+  SANDBOX_NAMESPACE_PREFIX: {{ .Values.backend.config.sandboxNamespacePrefix | quote }}
+  MAX_INSTANCE_DURATION_MINUTES: {{ .Values.backend.config.maxInstanceDurationMinutes | quote }}
+  CLEANUP_INTERVAL_SECONDS: {{ .Values.backend.config.cleanupIntervalSeconds | quote }}
+  TICKET_TTL_SECONDS: {{ .Values.backend.config.ticketTtlSeconds | quote }}
+  LOG_LEVEL: {{ .Values.backend.config.logLevel | quote }}
+  POSTGRES_HOST: {{ include "sandbox-platform.fullname" . }}-postgresql
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | quote }}
+  POSTGRES_USER: {{ .Values.postgresql.auth.username | quote }}
+  SANDBOX_IMAGE_UBUNTU: {{ .Values.sandbox.images.ubuntu | quote }}
+  SANDBOX_IMAGE_ROCKY: {{ .Values.sandbox.images.rocky | quote }}
+  SANDBOX_IMAGE_DEBIAN: {{ .Values.sandbox.images.debian | quote }}
+  SANDBOX_IMAGE_ALPINE: {{ .Values.sandbox.images.alpine | quote }}
+  SANDBOX_CPU: {{ .Values.sandbox.resources.cpu | quote }}
+  SANDBOX_MEMORY: {{ .Values.sandbox.resources.memory | quote }}

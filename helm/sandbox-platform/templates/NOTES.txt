@@ -1,0 +1,16 @@
+sandbox-platform has been deployed.
+
+Frontend / API:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.hostname }}
+{{- else }}
+  Ingress is disabled -- port-forward to reach the app:
+  kubectl port-forward svc/{{ include "sandbox-platform.fullname" . }}-frontend 8080:{{ .Values.frontend.service.port }} -n {{ .Release.Namespace }}
+{{- end }}
+
+Backend health check:
+  kubectl exec -n {{ .Release.Namespace }} deploy/{{ include "sandbox-platform.fullname" . }}-backend -- curl -sf localhost:8000/healthz
+
+Remember: this chart deploys the platform application only. Per-user
+sandbox namespaces (sandbox-*) are created and destroyed by the backend at
+runtime, not by this chart or ArgoCD.

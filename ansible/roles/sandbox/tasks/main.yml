@@ -1,0 +1,12 @@
+---
+- name: Ensure platform namespace exists
+  kubernetes.core.k8s:
+    name: "{{ platform_namespace }}"
+    kind: Namespace
+    state: present
+
+- name: Ensure backend runtime secret exists
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'backend-secret.yaml.j2') | from_yaml }}"
+  no_log: true # avoid printing secret values into Ansible output

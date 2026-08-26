@@ -1,0 +1,16 @@
+---
+# Shared configuration for environment preparation.
+#
+# This file holds non-sensitive defaults. Secret values (DB passwords,
+# backend secret keys, etc.) belong in a vault-encrypted file
+# (ansible/group_vars/secrets.yml, git-ignored — see
+# ansible/group_vars/secrets.yml.example) and are never committed in
+# plaintext.
+
+platform_namespace: sandbox-platform
+argocd_namespace: argocd
+
+# Kubernetes Secret name/keys the backend reads its runtime config from.
+# Ansible is responsible for ensuring this Secret exists with real values;
+# Helm just references it by name.
+backend_secret_name: sandbox-backend-secrets

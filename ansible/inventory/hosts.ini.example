@@ -1,0 +1,10 @@
+# Copy to hosts.ini and adjust. hosts.ini is git-ignored; this .example is
+# safe to commit.
+#
+# This platform is deployed onto Kubernetes, not onto individual hosts, so
+# the "localhost" group is used to run kubectl/helm-oriented Ansible tasks
+# from the machine that already has cluster access configured (the same
+# machine running `terraform apply`).
+
+[control]
+localhost ansible_connection=local

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform.lock.hcl
+terraform/*.tfvars
+!terraform/*.tfvars.example
+
+# Ansible
+ansible/*.retry
+ansible/inventory/hosts.ini
+!ansible/inventory/hosts.ini.example
+
+# Secrets / local config
+*.env
+.env.local
+**/secrets.yaml
+!**/secrets.yaml.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Helm
+helm/**/charts/*.tgz
+
+# Logs
+*.log

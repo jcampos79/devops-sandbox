@@ -1,0 +1,36 @@
+---
+# Post-bootstrap validation: confirms the environment prerequisites Terraform
+# and this role's bootstrap tasks put in place are actually present, before
+# handing off to ArgoCD/Helm. Fails loudly and early rather than letting
+# ArgoCD sync into a half-prepared namespace.
+- name: Validate sandbox platform environment
+  hosts: control
+  gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+    - name: Confirm platform namespace exists
+      kubernetes.core.k8s_info:
+        kind: Namespace
+        name: "{{ platform_namespace }}"
+      register: ns_info
+      failed_when: ns_info.resources | length == 0
+
+    - name: Confirm backend runtime Secret exists
+      kubernetes.core.k8s_info:
+        kind: Secret
+        namespace: "{{ platform_namespace }}"
+        name: "{{ backend_secret_name }}"
+      register: secret_info
+      failed_when: secret_info.resources | length == 0
+
+    - name: Confirm ArgoCD Application is registered
+      kubernetes.core.k8s_info:
+        api_version: argoproj.io/v1alpha1
+        kind: Application
+        namespace: "{{ argocd_namespace }}"
+        name: sandbox-platform
+      register: app_info
+      failed_when: app_info.resources | length == 0

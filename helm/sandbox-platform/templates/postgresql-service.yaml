@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sandbox-platform.fullname" . }}-postgresql
+  labels:
+    {{- include "sandbox-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  clusterIP: None
+  selector:
+    {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "postgresql") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

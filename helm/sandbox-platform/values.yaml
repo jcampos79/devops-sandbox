@@ -1,0 +1,135 @@
+# Default values for sandbox-platform.
+# Every environment-specific value lives here -- nothing is hard-coded in
+# the templates. See README.md "Configuration" for an overview.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------
+# Ingress
+# -----------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: ""
+  hostname: sandbox.example.com
+  tls:
+    enabled: false
+    secretName: ""
+  annotations: {}
+
+# -----------------------------------------------------------------------
+# Frontend (React + Vite, served as static assets behind a small server)
+# -----------------------------------------------------------------------
+frontend:
+  image:
+    repository: ""      # e.g. ghcr.io/your-org/sandbox-frontend
+    tag: ""              # e.g. "0.1.0" -- required, no floating `latest` default
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  service:
+    port: 80
+
+# -----------------------------------------------------------------------
+# Backend (FastAPI)
+# -----------------------------------------------------------------------
+backend:
+  image:
+    repository: ""      # e.g. ghcr.io/your-org/sandbox-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    port: 8000
+
+  # Name of the Kubernetes Secret (managed by Ansible, NOT this chart) that
+  # holds runtime secrets: POSTGRES_PASSWORD, BACKEND_SECRET_KEY, etc.
+  existingSecretName: sandbox-backend-secrets
+
+  # Non-secret runtime configuration, exposed to the backend as env vars via
+  # a ConfigMap this chart owns.
+  config:
+    sandboxNamespacePrefix: "sandbox-"
+    maxInstanceDurationMinutes: 30
+    cleanupIntervalSeconds: 30
+    ticketTtlSeconds: 45
+    logLevel: "INFO"
+
+  # ServiceAccount the backend Pod runs as. In the common case this is
+  # created by Terraform (terraform/main.tf); set create: false and point
+  # `name` at that pre-existing ServiceAccount. RBAC (Role/RoleBinding or
+  # ClusterRole/ClusterRoleBinding) for sandbox lifecycle management is
+  # provisioned by Terraform, not duplicated here.
+  serviceAccount:
+    create: false
+    name: sandbox-backend
+
+# -----------------------------------------------------------------------
+# Sandbox instance configuration (used by the backend when creating
+# per-user sandbox pods -- NOT deployed as workloads by this chart)
+# -----------------------------------------------------------------------
+sandbox:
+  images:
+    ubuntu: ""   # e.g. ghcr.io/your-org/sandbox-ubuntu:24.04
+    rocky: ""    # e.g. ghcr.io/your-org/sandbox-rocky:9
+    debian: ""   # e.g. ghcr.io/your-org/sandbox-debian:13
+    alpine: ""   # e.g. ghcr.io/your-org/sandbox-alpine:latest
+
+  # Fixed platform resource profile. NOT user-configurable at runtime --
+  # see README "Why not..." and spec Section 6/32. Credit cost depends only
+  # on duration, never on this profile.
+  resources:
+    cpu: "1"
+    memory: "512Mi"
+
+# -----------------------------------------------------------------------
+# PostgreSQL
+# -----------------------------------------------------------------------
+postgresql:
+  image:
+    repository: postgres
+    tag: "16"
+  auth:
+    database: sandbox
+    username: sandbox
+    # password comes from backend.existingSecretName (POSTGRES_PASSWORD),
+    # never set in plaintext here
+  persistence:
+    enabled: true
+    storageClass: ""    # "" = cluster default StorageClass
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# -----------------------------------------------------------------------
+# NetworkPolicies for the platform namespace itself (separate from the
+# per-sandbox-namespace NetworkPolicies the backend applies at runtime)
+# -----------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+
+# -----------------------------------------------------------------------
+# Metrics
+# -----------------------------------------------------------------------
+metrics:
+  enabled: true
+  path: /metrics
+  port: 8000

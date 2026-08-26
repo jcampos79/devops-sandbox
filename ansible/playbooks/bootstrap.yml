@@ -1,0 +1,22 @@
+---
+# Environment preparation: runs AFTER `terraform apply` has created the
+# platform namespace and RBAC prerequisites, and BEFORE/alongside ArgoCD
+# reconciling the Helm chart.
+#
+# Responsibilities kept here (see ansible/roles/sandbox):
+#   - ensure the runtime Secret(s) the backend needs exist in-cluster
+#   - any other one-time/idempotent environment prep that isn't part of the
+#     Helm-managed application itself
+#
+# Explicitly NOT responsibilities of this playbook:
+#   - deploying the frontend/backend/PostgreSQL (Helm's job, via ArgoCD)
+#   - fighting ArgoCD for reconciliation of application resources
+- name: Prepare sandbox platform environment
+  hosts: control
+  gather_facts: false
+
+  vars_files:
+    - ../group_vars/all.yml
+
+  roles:
+    - sandbox

@@ -1,0 +1,27 @@
+{{- if .Values.networkPolicy.enabled }}
+# Restricts traffic within the platform namespace itself. This is separate
+# from -- and unrelated to -- the NetworkPolicies the backend applies to
+# each dynamically-created sandbox-* namespace at runtime.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "sandbox-platform.fullname" . }}-backend
+  labels:
+    {{- include "sandbox-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "backend") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "frontend") | nindent 14 }}
+        # Also allow ingress-controller traffic (path-based routing sends
+        # /api and /ws straight to the backend, not through the frontend).
+        - namespaceSelector: {}
+      ports:
+        - port: 8000
+{{- end }}
