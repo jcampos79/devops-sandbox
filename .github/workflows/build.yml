@@ -82,5 +82,5 @@ jobs:
         with:
           context: ./backend
           push: true
-            tags: ${{ steps.meta-backend.outputs.tags }}
+          tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
