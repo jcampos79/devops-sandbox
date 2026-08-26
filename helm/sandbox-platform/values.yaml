@@ -11,7 +11,7 @@ fullnameOverride: ""
 ingress:
   enabled: true
   className: ""
-  hostname: sandbox.10.0.1.200.nip.io
+  hostname: sandbox.example.com
   tls:
     enabled: false
     secretName: ""

@@ -22,6 +22,28 @@ curl localhost:8000/healthz
 pytest
 ```
 
+Tests run against a real PostgreSQL database (`TEST_DATABASE_URL`, default
+`postgresql+psycopg://sandbox:sandbox@localhost:5432/sandbox`) rather than
+SQLite, because the credit-spend concurrency test relies on genuine
+`SELECT ... FOR UPDATE` row locking.
+
+## Creating the first admin user
+
+There's no self-registration (spec Section 21/48). Seed the first account
+via the CLI, run once inside the backend container/pod (or locally against
+your dev database):
+
+```bash
+python -m app.cli create-admin --username root --password <password>
+```
+
+## Migrations
+
+```bash
+alembic upgrade head              # apply
+alembic revision --autogenerate -m "description"   # generate a new one after model changes
+```
+
 ## Layout
 
 ```text

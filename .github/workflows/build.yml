@@ -84,3 +84,147 @@ jobs:
           push: true
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
+
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    # Only run this job if backend files actually changed
+    #if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Ubuntu
+        id: meta-ubuntu
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/sandbox-ubuntu
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build and push Ubuntu Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./images/ubuntu/
+          push: true
+          tags: ${{ steps.meta-ubuntu.outputs.tags }}
+          labels: ${{ steps.meta-ubuntu.outputs.labels }}
+
+  build-rocky:
+    runs-on: ubuntu-latest
+    # Only run this job if backend files actually changed
+    #if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Rocky
+        id: meta-rocky
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/sandbox-rocky
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build and push Rocky Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./images/rocky/
+          push: true
+          tags: ${{ steps.meta-rocky.outputs.tags }}
+          labels: ${{ steps.meta-rocky.outputs.labels }}
+
+  build-debian:
+    runs-on: ubuntu-latest
+    # Only run this job if backend files actually changed
+    #if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Debian
+        id: meta-debian
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/sandbox-debian
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build and push Debian Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./images/debian/
+          push: true
+          tags: ${{ steps.meta-debian.outputs.tags }}
+          labels: ${{ steps.meta-debian.outputs.labels }}
+
+  build-alpine:
+    runs-on: ubuntu-latest
+    # Only run this job if backend files actually changed
+    #if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Alpine
+        id: meta-alpine
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/sandbox-alpine
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build and push Alpine Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./images/alpine/
+          push: true
+          tags: ${{ steps.meta-alpine.outputs.tags }}
+          labels: ${{ steps.meta-alpine.outputs.labels }}

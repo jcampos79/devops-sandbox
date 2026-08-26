@@ -8,9 +8,11 @@ respective phases (see README Roadmap) and wired up in `app/api/`.
 """
 
 import logging
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.config import get_settings
@@ -20,10 +22,33 @@ settings = get_settings()
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger("sandbox_platform")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.services.cleanup import start_cleanup_task
+
+    start_cleanup_task()
+    yield
+
+
 app = FastAPI(
     title="DevOps/SRE Training Sandbox Platform API",
     version="0.1.0",
+    lifespan=lifespan,
 )
+
+
+@app.exception_handler(HTTPException)
+async def structured_http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Some endpoints raise HTTPException with a structured
+    {"error": ..., "message": ...} body (spec Section 25). Return that body
+    directly instead of FastAPI's default {"detail": ...} wrapper; plain
+    string details still get a consistent {"error", "message"} shape."""
+    if isinstance(exc.detail, dict):
+        body = exc.detail
+    else:
+        body = {"error": exc.__class__.__name__, "message": str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content=body)
 
 
 @app.get("/healthz", tags=["system"])
@@ -41,10 +66,12 @@ def metrics() -> PlainTextResponse:
     return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-# --- Routers (populated as each phase lands) ---
-# from app.api import auth, instances, credits, admin, terminal
-# app.include_router(auth.router, prefix="/api/v1")
-# app.include_router(instances.router, prefix="/api/v1")
-# app.include_router(credits.router, prefix="/api/v1")
-# app.include_router(admin.router, prefix="/api/v1/admin")
-# app.include_router(terminal.router)
+# --- Routers ---
+from app.api import admin, api_keys, auth, credits, instances, terminal  # noqa: E402
+
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(credits.router, prefix="/api/v1")
+app.include_router(instances.router, prefix="/api/v1")
+app.include_router(api_keys.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1/admin")
+app.include_router(terminal.router)

@@ -1,1 +1,1 @@
-"""Pydantic request/response schemas (Phase 2+)."""
+"""Pydantic request/response schemas."""

@@ -295,22 +295,49 @@ be filled in as the backend API lands in Phase 6.
 
 ## Roadmap
 
-This repository is being built incrementally. Current phase: **Phase 1**.
+This repository is being built incrementally.
 
 - [x] **Phase 1** — Repository structure, README, backend/frontend
       skeletons, Terraform/Ansible skeletons, Helm chart skeleton, ArgoCD
       Application definition.
-- [ ] **Phase 2** — Database + local auth (users, password hashing, login).
-- [ ] **Phase 3** — Credit ledger, balance calculation, admin credit mgmt,
-      concurrency-safe spend.
-- [ ] **Phase 4** — Kubernetes sandbox lifecycle (create/expire/terminate).
-- [ ] **Phase 5** — Browser terminal (xterm.js + ticket-auth WebSocket + exec).
-- [ ] **Phase 6** — REST API + API keys.
-- [ ] **Phase 7** — Admin UI.
-- [ ] **Phase 8** — Full GitOps deployment validation.
-- [ ] **Phase 9** — Observability (metrics, logging, health endpoints).
-- [ ] **Phase 10** — Documentation and final validation against acceptance
-      criteria.
+- [x] **Phase 2** — Database + local auth (users, password hashing, login,
+      Alembic migrations).
+- [x] **Phase 3** — Credit ledger, balance calculation, admin credit mgmt,
+      concurrency-safe spend (verified against real Postgres row locking).
+- [x] **Phase 4** — Kubernetes sandbox lifecycle (create/expire/terminate,
+      issue/confirm deletion, background cleanup task).
+- [x] **Phase 5** — Browser terminal (xterm.js + ticket-auth WebSocket +
+      Kubernetes exec bridge).
+- [x] **Phase 6** — REST API + API keys (dual session-token/API-key auth,
+      cross-user access rejected).
+- [x] **Phase 7** — Admin UI (users, credits, instances) + full frontend
+      (login, dashboard, create/terminate, terminal, credit history, API
+      keys).
+- [ ] **Phase 8** — Full GitOps deployment validation against a real cluster
+      (this environment could validate YAML structure and Python/TS
+      correctness, but not `helm template`/`terraform apply`/live K8s exec
+      -- see Testing below).
+- [ ] **Phase 9** — Observability polish (the `/metrics` endpoint exists;
+      richer counters per spec Section 35 still to be wired in).
+- [ ] **Phase 10** — Final documentation pass and acceptance-criteria
+      validation against a real cluster.
+
+### What's been validated in this environment
+
+- Backend: 47 tests pass against a **real local PostgreSQL** instance
+  (not SQLite) -- including a genuine concurrency test proving
+  `SELECT ... FOR UPDATE` prevents double-spending credits under
+  simultaneous requests. Kubernetes calls are mocked in tests (no live
+  cluster here); the client wrapper code itself has not been exercised
+  against a real cluster.
+- An Alembic migration was generated with `--autogenerate` and applied
+  against real Postgres.
+- Frontend: `tsc -b` type-checks clean, `vite build` produces a production
+  bundle, and Vitest passes.
+- Helm templates and Terraform/Ansible YAML were checked for structural
+  balance and valid YAML, but `helm template`, `terraform validate`, and
+  `terraform plan` were not run (no Helm/Terraform CLI available in this
+  environment) -- run those for real before deploying.
 
 ---
 

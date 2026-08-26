@@ -1,1 +1,1 @@
-"""FastAPI routers: auth, instances, credits, admin, terminal (Phase 2+)."""
+"""FastAPI routers: auth, instances, credits, admin, terminal."""
