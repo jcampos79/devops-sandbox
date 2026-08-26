@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-        # paths:
-        #   - 'frontend/**'
-        #   - 'backend/**'
-        #   - '.github/workflows/build.yml'
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/build.yml'
 
 env:
   REGISTRY: ghcr.io
@@ -16,7 +16,7 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     # Only run this job if frontend files actually changed
-    if: contains(github.event.head_commit.modified, 'frontend/') || github.event_name == 'workflow_dispatch'
+    #if: contains(github.event.head_commit.modified, 'frontend/') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -52,7 +52,7 @@ jobs:
   build-backend:
     runs-on: ubuntu-latest
     # Only run this job if backend files actually changed
-    if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
+    #if: contains(github.event.head_commit.modified, 'backend/') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
