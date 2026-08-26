@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'frontend/**'
-      - 'backend/**'
-      - '.github/workflows/build.yml'
+        # paths:
+        #   - 'frontend/**'
+        #   - 'backend/**'
+        #   - '.github/workflows/build.yml'
 
 env:
   REGISTRY: ghcr.io
