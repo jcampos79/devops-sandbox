@@ -16,8 +16,6 @@ spec:
         {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "backend") | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.backend.serviceAccount.name | default (printf "%s-backend" (include "sandbox-platform.fullname" .)) }}
-      securityContext:
-        runAsNonRoot: true
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
