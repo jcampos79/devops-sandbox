@@ -16,7 +16,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-org/devops-sandbox.git
+    repoURL: https://github.com/jcampos79/devops-sandbox.git
     targetRevision: main
     path: helm/sandbox-platform
     helm:

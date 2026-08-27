@@ -22,8 +22,8 @@ ingress:
 # -----------------------------------------------------------------------
 frontend:
   image:
-    repository: ""      # e.g. ghcr.io/your-org/sandbox-frontend
-    tag: ""              # e.g. "0.1.0" -- required, no floating `latest` default
+    repository: "ghcr.io/jcampos79/sandbox-frontend"      # e.g. ghcr.io/your-org/sandbox-frontend
+    tag: "latest"              # e.g. "0.1.0" -- required, no floating `latest` default
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -41,8 +41,8 @@ frontend:
 # -----------------------------------------------------------------------
 backend:
   image:
-    repository: ""      # e.g. ghcr.io/your-org/sandbox-backend
-    tag: ""
+    repository: "ghcr.io/jcampos79/sandbox-backend"      # e.g. ghcr.io/your-org/sandbox-backend
+    tag: "latest"
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
