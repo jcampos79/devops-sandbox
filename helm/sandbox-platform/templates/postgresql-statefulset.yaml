@@ -18,7 +18,6 @@ spec:
     spec:
       securityContext:
         fsGroup: 999
-        runAsNonRoot: true
       {{- if not .Values.postgresql.persistence.enabled }}
       volumes:
         - name: data
