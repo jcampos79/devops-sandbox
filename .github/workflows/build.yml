@@ -7,6 +7,7 @@ on:
     paths:
       - 'frontend/**'
       - 'backend/**'
+      - 'images/**/**'
       - '.github/workflows/build.yml'
 
 env:

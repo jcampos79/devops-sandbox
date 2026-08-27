@@ -22,7 +22,7 @@ ingress:
 # -----------------------------------------------------------------------
 frontend:
   image:
-    repository: "ghcr.io/jcampos79/sandbox-frontend"      # e.g. ghcr.io/your-org/sandbox-frontend
+    repository: "ghcr.io/jcampos79/devops-sandbox/sandbox-frontend"      # e.g. ghcr.io/your-org/sandbox-frontend
     tag: "latest"              # e.g. "0.1.0" -- required, no floating `latest` default
     pullPolicy: IfNotPresent
   replicas: 1
@@ -41,7 +41,7 @@ frontend:
 # -----------------------------------------------------------------------
 backend:
   image:
-    repository: "ghcr.io/jcampos79/sandbox-backend"      # e.g. ghcr.io/your-org/sandbox-backend
+    repository: "ghcr.io/jcampos79/devops-sandbox/sandbox-backend"      # e.g. ghcr.io/your-org/sandbox-backend
     tag: "latest"
     pullPolicy: IfNotPresent
   replicas: 1
@@ -83,10 +83,10 @@ backend:
 # -----------------------------------------------------------------------
 sandbox:
   images:
-    ubuntu: "ghcr.io/jcampos79/sandbox-ubuntu:latest"   # e.g. ghcr.io/your-org/sandbox-ubuntu:24.04
-    rocky: "ghcr.io/jcampos79/sandbox-rocky:latest"     # e.g. ghcr.io/your-org/sandbox-rocky:9
-    debian: "ghcr.io/jcampos79/sandbox-debian:latest"   # e.g. ghcr.io/your-org/sandbox-debian:13
-    alpine: "ghcr.io/jcampos79/sandbox-alpine:latest"   # e.g. ghcr.io/your-org/sandbox-alpine:latest
+    ubuntu: "ghcr.io/jcampos79/devops-sandbox/sandbox-ubuntu:latest"   # e.g. ghcr.io/your-org/sandbox-ubuntu:24.04
+    rocky: "ghcr.io/jcampos79/devops-sandbox/sandbox-rocky:latest"     # e.g. ghcr.io/your-org/sandbox-rocky:9
+    debian: "ghcr.io/jcampos79/devops-sandbox/sandbox-debian:latest"   # e.g. ghcr.io/your-org/sandbox-debian:13
+    alpine: "ghcr.io/jcampos79/devops-sandbox/sandbox-alpine:latest"   # e.g. ghcr.io/your-org/sandbox-alpine:latest
 
   # Fixed platform resource profile. NOT user-configurable at runtime --
   # see README "Why not..." and spec Section 6/32. Credit cost depends only
