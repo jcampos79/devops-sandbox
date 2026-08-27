@@ -24,8 +24,6 @@ spec:
               containerPort: 80
           securityContext:
             allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
           readinessProbe:
             httpGet:
               path: /
