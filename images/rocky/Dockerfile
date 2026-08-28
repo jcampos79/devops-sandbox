@@ -7,6 +7,7 @@ RUN dnf install -y \
     iputils \
     bind-utils \
     procps-ng \
+    vim-minimal \
     net-tools \
     traceroute \
     tcpdump \

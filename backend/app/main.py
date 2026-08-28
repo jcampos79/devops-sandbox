@@ -38,6 +38,23 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def count_requests(request: Request, call_next):
+    """Increments sandbox_api_requests_total for every request (spec
+    Section 35). Uses route.path (e.g. /api/v1/instances/{instance_id})
+    rather than the raw URL so the label doesn't explode with one series
+    per instance UUID."""
+    response = await call_next(request)
+    from app.services.metrics import sandbox_api_requests_total
+
+    route = request.scope.get("route")
+    path = route.path if route is not None else request.url.path
+    sandbox_api_requests_total.labels(
+        method=request.method, path=path, status_code=str(response.status_code)
+    ).inc()
+    return response
+
+
 @app.exception_handler(HTTPException)
 async def structured_http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Some endpoints raise HTTPException with a structured

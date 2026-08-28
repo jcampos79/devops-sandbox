@@ -14,6 +14,12 @@ from app.config import get_settings
 from app.kubernetes.client import KubernetesUnavailableError, k8s, utcnow
 from app.models import Distribution, Instance, InstanceStatus, User
 from app.services.credits import InsufficientCreditsError, spend_credits
+from app.services.metrics import (
+    sandbox_credits_consumed_total,
+    sandbox_instance_creation_errors_total,
+    sandbox_instances_active,
+    sandbox_instances_created_total,
+)
 
 settings = get_settings()
 logger = logging.getLogger("sandbox_platform")
@@ -112,11 +118,15 @@ def create_sandbox_instance(
         instance.error_message = "Failed to provision sandbox environment"
         db.commit()
         db.refresh(instance)
+        sandbox_instance_creation_errors_total.inc()
         return instance
 
     instance.status = InstanceStatus.RUNNING
     db.commit()
     db.refresh(instance)
+    sandbox_instances_created_total.labels(distribution=distribution.value).inc()
+    sandbox_instances_active.inc()
+    sandbox_credits_consumed_total.inc(cost)
     logger.info(
         "Instance created: id=%s user_id=%s namespace=%s distribution=%s duration=%s",
         instance.id,
@@ -139,6 +149,7 @@ def issue_termination(db: Session, instance: Instance) -> Instance:
     instance.status = InstanceStatus.TERMINATING
     instance.deletion_issued_at = utcnow()
     db.commit()
+    sandbox_instances_active.dec()
 
     try:
         k8s.delete_namespace(instance.namespace)

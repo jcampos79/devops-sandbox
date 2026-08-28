@@ -30,8 +30,6 @@ spec:
                 name: {{ .Values.backend.existingSecretName }}
           securityContext:
             allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
             readOnlyRootFilesystem: true
           readinessProbe:
             httpGet:

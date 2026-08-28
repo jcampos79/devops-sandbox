@@ -317,10 +317,14 @@ This repository is being built incrementally.
       (this environment could validate YAML structure and Python/TS
       correctness, but not `helm template`/`terraform apply`/live K8s exec
       -- see Testing below).
-- [ ] **Phase 9** — Observability polish (the `/metrics` endpoint exists;
-      richer counters per spec Section 35 still to be wired in).
-- [ ] **Phase 10** — Final documentation pass and acceptance-criteria
-      validation against a real cluster.
+- [x] **Phase 9** — Observability: `/metrics` exposes all seven counters/
+      gauges from spec Section 35 (verified emitted correctly), plus
+      structured logging across login, instance create/expire/terminate,
+      namespace/pod creation, terminal connect/disconnect, and Kubernetes
+      errors -- never passwords, hashes, API keys, or ticket tokens.
+- [x] **Phase 10** — Documentation pass (this README) and acceptance
+      criteria walked below. Full sign-off still needs a real cluster --
+      see "What's been validated" and "Known gaps before production use."
 
 ### What's been validated in this environment
 
@@ -337,17 +341,141 @@ This repository is being built incrementally.
 - Helm templates and Terraform/Ansible YAML were checked for structural
   balance and valid YAML, but `helm template`, `terraform validate`, and
   `terraform plan` were not run (no Helm/Terraform CLI available in this
-  environment) -- run those for real before deploying.
+  environment, and their release domains -- get.helm.sh,
+  releases.hashicorp.com -- aren't in this sandbox's network allowlist).
+  Run those for real before deploying.
+
+### Known gaps before production use
+
+Be aware of these before pointing this at a real cluster:
+
+- **Kubernetes exec/RBAC code path is unexercised.** `app/kubernetes/client.py`
+  and `app/terminal/exec_bridge.py` were written against the documented
+  `kubernetes` Python client API and are internally consistent with the
+  tests (which mock this layer), but have never actually talked to a real
+  API server. Test namespace/pod creation, exec, and deletion against a
+  real (ideally disposable) cluster before relying on this.
+- **`helm template` / `terraform validate` / `terraform plan` were never
+  run.** The chart and Terraform config are structurally sound (balanced
+  `{{ }}`/`if`/`end`, valid YAML/HCL) but have not been rendered or
+  planned for real. Do that first.
+- **No load testing.** The single in-process cleanup task and the
+  `SELECT ... FOR UPDATE` credit-locking approach are appropriate for
+  training-scale traffic (a handful to a few dozen concurrent users) --
+  they were not evaluated beyond a two-concurrent-request race test.
+- **TLS termination** is assumed to happen at the Ingress
+  (`ingress.tls.*` in values.yaml) -- nothing in this repo provisions
+  certificates itself (e.g. cert-manager). Wire that up separately if
+  needed.
 
 ---
 
+## Creating users
+
+There's no self-registration by design (spec Section 21/48). Two ways to
+create accounts:
+
+**1. The very first admin**, via the CLI, run once inside the backend
+container/pod (or locally against your dev database):
+
+```bash
+kubectl exec -n sandbox-platform deploy/sandbox-platform-backend -- \
+  python -m app.cli create-admin --username root --password '<a-real-password>'
+```
+
+(Locally, without Kubernetes: `cd backend && python -m app.cli create-admin --username root --password ...`
+with your `.env` pointed at a running Postgres.)
+
+**2. Everyone else**, once you have an admin account, either:
+- **Admin UI** — log in as the admin, go to *Admin: Users*, fill in the
+  "Create User" form (username, password, optional admin checkbox).
+- **API** —
+  ```bash
+  curl -X POST https://sandbox.example.com/api/v1/admin/users \
+    -H "Authorization: Bearer <admin's session token or API key>" \
+    -H "Content-Type: application/json" \
+    -d '{"username": "engineer1", "password": "...", "is_admin": false}'
+  ```
+
+New users start with a balance of 0 credits — grant some from the same
+Admin: Users page (or `POST /api/v1/admin/users/{id}/credits`) before they
+can create a sandbox.
+
 ## Troubleshooting
 
-Will be expanded as each phase lands. General starting points:
-
 - `kubectl get applications -n argocd` — check ArgoCD sync status.
-- `kubectl get pods -n <platform-namespace>` — check backend/frontend/DB pods.
-- `kubectl get ns | grep sandbox-` — list currently active sandbox namespaces.
-- Backend structured logs cover login, instance create/expire/terminate,
-  namespace/pod creation, terminal connections, and Kubernetes/API errors —
-  never passwords, API keys, hashes, or ticket tokens.
+- `kubectl get pods -n sandbox-platform` — check backend/frontend/DB pods.
+- `kubectl logs -n sandbox-platform deploy/sandbox-platform-backend` —
+  structured backend logs: login, instance create/expire/terminate,
+  namespace/pod creation, terminal connections, Kubernetes/API errors.
+  Never contains passwords, API keys, hashes, or ticket tokens.
+- `kubectl get ns | grep sandbox-` — list currently active sandbox
+  namespaces; each should correspond to a RUNNING or TERMINATING instance
+  in the database.
+- **Instance stuck in CREATING/TERMINATING** — check the backend's RBAC
+  (`kubectl auth can-i create namespaces --as=system:serviceaccount:sandbox-platform:sandbox-backend`)
+  and confirm the cleanup task is running (look for "Cleanup pass failed"
+  in backend logs, which would indicate an exception being swallowed
+  between passes).
+- **Instance goes straight to ERROR** — almost always a missing/invalid
+  `sandbox.images.*` value in `values.yaml`, or the backend's
+  ServiceAccount lacking permission to create Pods in new namespaces.
+- **Terminal won't connect** — tickets are single-use and expire in
+  `TICKET_TTL_SECONDS` (default 45s); if the frontend is slow to open the
+  WebSocket after minting a ticket, it may already be expired. Also check
+  the instance is actually `RUNNING` (not `CREATING`) — the ticket
+  endpoint rejects non-running instances.
+- **`GET /metrics` looks empty** — counters only appear in the scrape
+  output after the first event that increments them fires (Prometheus
+  client behavior); `sandbox_instances_active` and friends start at 0 but
+  are always present.
+
+## Acceptance criteria status
+
+Self-assessment against the original spec's acceptance criteria. ✅ =
+implemented and covered by a passing automated test. ⚠️ = implemented but
+not verifiable in this environment (needs a real cluster/CLI). Everything
+below is ✅ or ⚠️ — nothing was skipped.
+
+**Authentication:** ✅ login, password hashing, disabled-user rejection,
+admin flag all covered by tests.
+
+**Credits:** ✅ balance display, admin add/remove, every change creates a
+transaction, instance creation deducts duration, insufficient credits
+blocks creation, early termination doesn't refund, concurrent creation
+can't double-spend (real Postgres row-lock test).
+
+**Instances:** ✅ all four distributions selectable and validated, 1-30
+minute range enforced server-side, cost independent of resources, unique
+`sandbox-*` namespace per instance, fixed 1 CPU/512Mi profile, no
+persistent storage, issue/confirm deletion tracked as distinct states,
+historical records retained. ⚠️ root-inside-container-but-no-K8s-access and
+`baseline` PSS/dropped-capabilities enforcement are implemented in
+`app/kubernetes/client.py` exactly as specified, but unverified against a
+live API server.
+
+**Terminal:** ✅ ticket issuance/redemption/expiry/reuse-rejection
+covered by tests. ⚠️ the actual WebSocket-to-`kubectl exec`-equivalent
+bridge is implemented but untested against a real pod.
+
+**API:** ✅ API key creation/hashing/revocation, full instance CRUD,
+credit info, cross-user access rejected (404) — all covered by tests.
+
+**Kubernetes:** ✅ RBAC is scoped to namespace/pod lifecycle verbs only in
+`terraform/main.tf` (no cluster-admin). ⚠️ NetworkPolicies for sandbox
+namespaces and the "no privileged/host-network/PID/IPC" pod spec are
+written to spec but unverified live.
+
+**Deployment:** ⚠️ Terraform/Helm/Ansible are structurally validated
+(balanced templates, valid YAML/HCL) but `terraform apply` /
+`helm install` / `ansible-playbook` were never run end-to-end here — do
+that before trusting this in production.
+
+**Testing:** ✅ 47 backend tests pass against real PostgreSQL (not
+SQLite); frontend type-checks (`tsc -b`), builds (`vite build`), and its
+test passes (Vitest). Infrastructure validation is YAML/HCL-syntax-level
+only, not `terraform validate`/`helm template`.
+
+**Documentation:** ✅ this README covers architecture, prerequisites,
+deployment, GitOps flow, API usage, sandbox lifecycle, configuration,
+image building, creating users, and troubleshooting.

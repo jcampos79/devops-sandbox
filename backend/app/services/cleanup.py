@@ -21,6 +21,11 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.kubernetes.client import KubernetesUnavailableError, k8s, utcnow
 from app.models import Instance, InstanceStatus
+from app.services.metrics import (
+    sandbox_instances_active,
+    sandbox_instances_expired_total,
+    sandbox_instances_terminated_total,
+)
 
 settings = get_settings()
 logger = logging.getLogger("sandbox_platform")
@@ -63,6 +68,7 @@ def _issue_expired(db: Session) -> None:
         instance.status = InstanceStatus.TERMINATING
         instance.deletion_issued_at = now
         db.commit()
+        sandbox_instances_active.dec()
         try:
             k8s.delete_namespace(instance.namespace)
         except KubernetesUnavailableError as e:
@@ -89,8 +95,10 @@ def _confirm_terminating(db: Session) -> None:
         now = utcnow()
         if instance.deletion_issued_at and instance.deletion_issued_at >= instance.expires_at:
             instance.status = InstanceStatus.EXPIRED
+            sandbox_instances_expired_total.inc()
         else:
             instance.status = InstanceStatus.TERMINATED
+            sandbox_instances_terminated_total.inc()
         instance.terminated_at = now
         db.commit()
         logger.info(
