@@ -16,6 +16,41 @@ spec:
         {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "backend") | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.backend.serviceAccount.name | default (printf "%s-backend" (include "sandbox-platform.fullname" .)) }}
+      diff --git a/helm/sandbox-platform/templates/backend-deployment.yaml b/helm/sandbox-platform/templates/backend-deployment.yaml
+index .......... .. ..........
+--- a/helm/sandbox-platform/templates/backend-deployment.yaml
++++ b/helm/sandbox-platform/templates/backend-deployment.yaml
+@@ -14,6 +14,32 @@ spec:
+       labels:
+         {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "backend") | nindent 8 }}
+     spec:
+       serviceAccountName: {{ .Values.backend.serviceAccount.name | default (printf "%s-backend" (include "sandbox-platform.fullname" .)) }}
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until pg_isready -h "$POSTGRES_HOST" -p 5432 -U "$POSTGRES_USER"; do
+                echo "Waiting for PostgreSQL at ${POSTGRES_HOST}:5432..."
+                sleep 2
+              done
+
+              echo "PostgreSQL is ready. Running database migrations..."
+              alembic upgrade head
+          envFrom:
+            - configMapRef:
+                name: {{ include "sandbox-platform.fullname" . }}-backend-config
+            - secretRef:
+                name: {{ .Values.backend.existingSecretName }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
