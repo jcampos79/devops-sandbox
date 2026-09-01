@@ -16,32 +16,52 @@ spec:
         {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "backend") | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.backend.serviceAccount.name | default (printf "%s-backend" (include "sandbox-platform.fullname" .)) }}
-#      initContainers:
-#        - name: migrate
-#          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
-#          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
-#          command:
-#            - /bin/sh
-#            - -c
-#            - |
-#              until pg_isready -h "$POSTGRES_HOST" -p 5432 -U "$POSTGRES_USER"; do
-#                echo "Waiting for PostgreSQL at ${POSTGRES_HOST}:5432..."
-#                sleep 2
-#              done
-#
-#              echo "PostgreSQL is ready. Running database migrations..."
-#              alembic upgrade head
-#          envFrom:
-#            - configMapRef:
-#                name: {{ include "sandbox-platform.fullname" . }}-backend-config
-#            - secretRef:
-#                name: {{ .Values.backend.existingSecretName }}
-#          securityContext:
-#            allowPrivilegeEscalation: false
-#            capabilities:
-#              drop:
-#                - ALL
-#            readOnlyRootFilesystem: true
+      initContainers:
+        # Runs `alembic upgrade head` before the backend container starts.
+        # Deliberately an initContainer on this Deployment rather than a
+        # separate Helm hook Job: it shares this pod's ConfigMap/Secret
+        # (no hook-ordering-vs-chart-resources problem to reason about),
+        # and Kubernetes retries a failing initContainer using the pod's
+        # own restart/backoff behavior -- no separate backoffLimit/
+        # activeDeadlineSeconds/hook-delete-policy bookkeeping needed.
+        # Waits for Postgres to actually accept connections first (the
+        # StatefulSet may exist as an object before its pod is Ready).
+        #
+        # Note: with backend.replicas > 1, more than one pod could start
+        # this initContainer around the same time. `alembic upgrade head`
+        # is idempotent once a migration has applied, but two pods racing
+        # to apply the SAME not-yet-applied migration concurrently could
+        # collide. Not a concern at the default replicas: 1, and adding
+        # migration leader-election would be over-engineering for a
+        # training platform -- if you scale the backend up, consider
+        # running migrations as a separate one-off step in your deploy
+        # process instead.
+        - name: migrate
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              python -c "
+              import socket, time, sys
+              host = '{{ include "sandbox-platform.fullname" . }}-postgresql'
+              for attempt in range(60):
+                  try:
+                      socket.create_connection((host, 5432), timeout=2).close()
+                      sys.exit(0)
+                  except OSError:
+                      time.sleep(2)
+              print(f'Timed out waiting for {host}:5432', file=sys.stderr)
+              sys.exit(1)
+              " && alembic upgrade head
+          envFrom:
+            - configMapRef:
+                name: {{ include "sandbox-platform.fullname" . }}-backend-config
+            - secretRef:
+                name: {{ .Values.backend.existingSecretName }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
