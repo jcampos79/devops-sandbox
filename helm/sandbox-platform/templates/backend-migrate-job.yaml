@@ -30,8 +30,6 @@ spec:
         {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "migrate") | nindent 8 }}
     spec:
       restartPolicy: Never
-      securityContext:
-        runAsNonRoot: true
       initContainers:
         # Postgres being created (post-install) doesn't mean its Pod is
         # Ready yet. Retry a plain TCP connect rather than assume timing.
@@ -54,8 +52,6 @@ spec:
               sys.exit(1)
           securityContext:
             allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
             readOnlyRootFilesystem: true
       containers:
         - name: migrate
@@ -85,6 +81,4 @@ spec:
                   key: POSTGRES_PASSWORD
           securityContext:
             allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
             readOnlyRootFilesystem: true
