@@ -38,7 +38,8 @@ spec:
         # process instead.
         - name: migrate
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
-          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}a
+          workingDir: /app
           command: ["sh", "-c"]
           args:
             - |
@@ -53,7 +54,7 @@ spec:
                       time.sleep(2)
               print(f'Timed out waiting for {host}:5432', file=sys.stderr)
               sys.exit(1)
-              " && alembic upgrade head
+              " && cd /app && alembic upgrade head
           envFrom:
             - configMapRef:
                 name: {{ include "sandbox-platform.fullname" . }}-backend-config
