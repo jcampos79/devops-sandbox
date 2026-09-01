@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     traceroute \
     tcpdump \
     ca-certificates \
+    sysstat \
+    iftop \
+    nload \
     && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-c"]
