@@ -1,0 +1,90 @@
+# Runs `alembic upgrade head` before the backend Deployment picks up a new
+# image, using an ArgoCD/Helm hook. Deliberately `post-install` (not
+# `pre-install`): Helm hook resources are created before ANY of the
+# chart's regular resources -- including the PostgreSQL StatefulSet -- so
+# a pre-install hook would try to migrate a database that doesn't exist
+# yet on a fresh install. `post-install` runs after Postgres has been
+# created (though not necessarily Ready yet -- see the wait-for-postgres
+# initContainer below); `pre-upgrade` runs before the backend picks up a
+# new image on subsequent releases, when Postgres is already up.
+#
+# hook-delete-policy ensures old completed Job objects don't pile up across
+# releases (Jobs are immutable, so Helm can't just update one in place).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "sandbox-platform.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "sandbox-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": post-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        {{- include "sandbox-platform.selectorLabels" (dict "context" . "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+      initContainers:
+        # Postgres being created (post-install) doesn't mean its Pod is
+        # Ready yet. Retry a plain TCP connect rather than assume timing.
+        - name: wait-for-postgres
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import socket, time, sys
+              host = "{{ include "sandbox-platform.fullname" . }}-postgresql"
+              for attempt in range(60):
+                  try:
+                      socket.create_connection((host, 5432), timeout=2).close()
+                      sys.exit(0)
+                  except OSError:
+                      time.sleep(2)
+              print(f"Timed out waiting for {host}:5432", file=sys.stderr)
+              sys.exit(1)
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+      containers:
+        - name: migrate
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            # Set directly from values instead of via configMapRef to the
+            # chart's own ConfigMap. Now that this hook is post-install
+            # (see comment above the Job), the ConfigMap would technically
+            # already exist by the time this runs -- but setting these
+            # directly keeps the migrate Job's dependencies minimal and
+            # avoids re-introducing an ordering assumption if the hook
+            # phase ever changes again. The Secret is fine to reference
+            # directly either way -- it's provisioned by Ansible ahead of
+            # the Helm install, not owned by this chart.
+            - name: POSTGRES_HOST
+              value: {{ include "sandbox-platform.fullname" . }}-postgresql
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.existingSecretName }}
+                  key: POSTGRES_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
